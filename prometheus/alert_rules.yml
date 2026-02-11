@@ -1,0 +1,146 @@
+groups:
+  - name: example_alerts
+    interval: 30s
+    rules:
+      # Alert if an instance is down
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} down"
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute."
+
+      # Alert if CPU usage is high
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% (current value: {{ $value }}%)"
+
+      # Alert if memory usage is high
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 85% (current value: {{ $value }}%)"
+
+      # Alert if disk space is low
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk space is below 20% (current value: {{ $value }}%)"
+
+      # Alert if too many scrape failures
+      - alert: HighScrapeFailures
+        expr: rate(prometheus_target_scrapes_exceeded_sample_limit_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High scrape failures for {{ $labels.job }}"
+          description: "Prometheus is experiencing scrape failures"
+
+  # Mock App Alerts
+  - name: mock_app_alerts
+    interval: 30s
+    rules:
+      # High error rate in mock app
+      - alert: HighErrorRate
+        expr: (sum(rate(otel_http_requests_total{status=~"5.."}[5m])) / sum(rate(otel_http_requests_total[5m]))) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: mock-app
+        annotations:
+          summary: "High error rate detected in mock application"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Slow response times
+      - alert: SlowResponseTime
+        expr: histogram_quantile(0.95, rate(otel_http_response_duration_seconds_bucket[5m])) > 2.0
+        for: 3m
+        labels:
+          severity: warning
+          service: mock-app
+        annotations:
+          summary: "Slow response times detected"
+          description: "95th percentile response time is {{ $value }}s (threshold: 2s)"
+
+      # High request volume spike
+      - alert: RequestVolumeSpike
+        expr: rate(otel_http_requests_total[1m]) > rate(otel_http_requests_total[10m]) * 2
+        for: 2m
+        labels:
+          severity: warning
+          service: mock-app
+        annotations:
+          summary: "Sudden spike in request volume"
+          description: "Request rate has doubled compared to recent average"
+
+      # Low active users (service degradation)
+      - alert: LowActiveUsers
+        expr: otel_active_users < 5
+        for: 5m
+        labels:
+          severity: warning
+          service: mock-app
+        annotations:
+          summary: "Low number of active users"
+          description: "Only {{ $value }} active users (possible service degradation)"
+
+      # No requests received
+      - alert: NoRequestsReceived
+        expr: rate(otel_http_requests_total[5m]) == 0
+        for: 3m
+        labels:
+          severity: critical
+          service: mock-app
+        annotations:
+          summary: "No requests being processed"
+          description: "Mock application has not processed any requests in the last 5 minutes"
+
+  # OTEL Collector Alerts
+  - name: otel_collector_alerts
+    interval: 30s
+    rules:
+      # OTEL Collector down
+      - alert: OTELCollectorDown
+        expr: up{job="otel-collector"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenTelemetry Collector is down"
+          description: "OTEL Collector has been unavailable for more than 1 minute"
+
+      # High CPU on host system
+      - alert: HostHighCPU
+        expr: avg(otel_system_cpu_utilization) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU utilization on host system"
+          description: "CPU utilization is {{ $value | humanizePercentage }} (threshold: 85%)"
+
+      # High memory on host system
+      - alert: HostHighMemory
+        expr: avg(otel_system_memory_utilization) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory utilization on host system"
+          description: "Memory utilization is {{ $value | humanizePercentage }} (threshold: 90%)"

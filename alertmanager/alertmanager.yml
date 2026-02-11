@@ -1,0 +1,82 @@
+global:
+  resolve_timeout: 5m
+  # SMTP settings (configure for email notifications)
+  # smtp_smarthost: 'smtp.gmail.com:587'
+  # smtp_from: 'alertmanager@example.com'
+  # smtp_auth_username: 'your-email@gmail.com'
+  # smtp_auth_password: 'your-app-password'
+
+# Templates for notifications
+templates:
+  - '/etc/alertmanager/*.tmpl'
+
+# Route tree for alerts
+route:
+  # Default receiver
+  receiver: 'default-receiver'
+  
+  # Group alerts by these labels
+  group_by: ['alertname', 'cluster', 'service']
+  
+  # How long to wait before sending initial notification
+  group_wait: 10s
+  
+  # How long to wait before sending notification about new alerts
+  group_interval: 10s
+  
+  # How long to wait before resending notification
+  repeat_interval: 12h
+
+  # Child routes
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical-receiver'
+      group_wait: 5s
+      repeat_interval: 4h
+
+    # Warning alerts - less urgent
+    - match:
+        severity: warning
+      receiver: 'warning-receiver'
+      group_wait: 30s
+      repeat_interval: 12h
+
+# Inhibition rules - suppress certain alerts when others are firing
+inhibit_rules:
+  # Suppress warning if critical alert is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+# Receivers - where to send notifications
+receivers:
+  - name: 'default-receiver'
+    # Webhook example (can integrate with Slack, Teams, etc.)
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook'
+        send_resolved: true
+
+  - name: 'critical-receiver'
+    # Console logging (for learning)
+    webhook_configs:
+      - url: 'http://localhost:5001/critical'
+        send_resolved: true
+    # Email example (uncomment and configure)
+    # email_configs:
+    #   - to: 'oncall@example.com'
+    #     headers:
+    #       subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
+
+  - name: 'warning-receiver'
+    webhook_configs:
+      - url: 'http://localhost:5001/warning'
+        send_resolved: true
+    # Slack example (uncomment and configure)
+    # slack_configs:
+    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+    #     channel: '#alerts'
+    #     title: 'Alert: {{ .GroupLabels.alertname }}'
