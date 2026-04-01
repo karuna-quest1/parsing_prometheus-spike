@@ -88,6 +88,20 @@ memory_usage = meter.create_observable_gauge(
     callbacks=[lambda options: [metrics.Observation(random.uniform(2e9, 8e9))]],
 )
 
+system_cpu_utilization = meter.create_observable_gauge(
+    name="system_cpu_utilization",
+    description="Mock CPU utilization",
+    unit="",
+    callbacks=[lambda options: [metrics.Observation(0.95)]],
+)
+
+system_memory_utilization = meter.create_observable_gauge(
+    name="system_memory_utilization",
+    description="Mock memory utilization",
+    unit="",
+    callbacks=[lambda options: [metrics.Observation(0.95)]],
+)
+
 
 # Simulate application behavior
 def simulate_traffic():

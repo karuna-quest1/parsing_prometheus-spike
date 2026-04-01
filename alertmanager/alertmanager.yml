@@ -1,10 +1,10 @@
 global:
   resolve_timeout: 5m
   # SMTP settings (configure for email notifications)
-  # smtp_smarthost: 'smtp.gmail.com:587'
-  # smtp_from: 'alertmanager@example.com'
-  # smtp_auth_username: 'your-email@gmail.com'
-  # smtp_auth_password: 'your-app-password'
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'bondakoli18@gmail.com'
+  smtp_auth_username: 'bondakoli18@gmail.com'
+  smtp_auth_password: 'kysr ybhg fryr jkut'
 
 # Templates for notifications
 templates:
@@ -66,10 +66,10 @@ receivers:
       - url: 'http://localhost:5001/critical'
         send_resolved: true
     # Email example (uncomment and configure)
-    # email_configs:
-    #   - to: 'oncall@example.com'
-    #     headers:
-    #       subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
+    email_configs:
+      - to: 'bondakoli19@gmail.com'
+        headers:
+          subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
 
   - name: 'warning-receiver'
     webhook_configs:

@@ -1,0 +1,98 @@
+{
+    "meta": {
+        "type": "db",
+        "canSave": true,
+        "canEdit": true,
+        "canAdmin": true,
+        "canStar": true,
+        "canDelete": true,
+        "slug": "node-hardware-metrics",
+        "url": "/d/node-hardware-metrics/node-hardware-metrics",
+        "expires": "0001-01-01T00:00:00Z",
+        "created": "2026-03-29T13:21:42Z",
+        "updated": "2026-03-29T13:21:42Z",
+        "updatedBy": "Anonymous",
+        "createdBy": "Anonymous",
+        "version": 1,
+        "hasAcl": false,
+        "isFolder": false,
+        "apiVersion": "v0alpha1",
+        "folderId": 0,
+        "folderUid": "",
+        "folderTitle": "General",
+        "folderUrl": "",
+        "provisioned": false,
+        "provisionedExternalId": "node-hardware-metrics.json",
+        "annotationsPermissions": {
+            "dashboard": {
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            },
+            "organization": {
+                "canAdd": true,
+                "canEdit": true,
+                "canDelete": true
+            }
+        }
+    },
+    "dashboard": {
+        "id": 2618183046365184,
+        "panels": [
+            {
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "prometheus"
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 0
+                },
+                "id": 1,
+                "targets": [
+                    {
+                        "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)",
+                        "legendFormat": "CPU %",
+                        "refId": "A"
+                    }
+                ],
+                "title": "CPU Usage (Node Exporter)",
+                "type": "timeseries"
+            },
+            {
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "prometheus"
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 0
+                },
+                "id": 2,
+                "targets": [
+                    {
+                        "expr": "node_memory_MemFree_bytes",
+                        "legendFormat": "Free Bytes",
+                        "refId": "A"
+                    }
+                ],
+                "title": "Free Memory",
+                "type": "timeseries"
+            }
+        ],
+        "refresh": "5s",
+        "schemaVersion": 36,
+        "tags": [
+            "demo",
+            "generated"
+        ],
+        "timezone": "browser",
+        "title": "Node Hardware Metrics",
+        "uid": "node-hardware-metrics",
+        "version": 1
+    }
+}

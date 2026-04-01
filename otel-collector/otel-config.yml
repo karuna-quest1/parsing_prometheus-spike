@@ -1,5 +1,4 @@
 receivers:
-  # Receive metrics via OTLP (from our mock app)
   otlp:
     protocols:
       grpc:
@@ -7,7 +6,6 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
-  # Collect host metrics (CPU, memory, disk, network)
   hostmetrics:
     collection_interval: 10s
     scrapers:
@@ -25,7 +23,6 @@ receivers:
       load:
       processes:
 
-  # Self-monitoring
   prometheus:
     config:
       scrape_configs:
@@ -35,7 +32,6 @@ receivers:
             - targets: ['0.0.0.0:8888']
 
 processors:
-  # Add resource attributes
   resource:
     attributes:
       - key: service.name
@@ -48,44 +44,45 @@ processors:
         value: demo-host
         action: upsert
 
-  # Batch metrics before sending
   batch:
     timeout: 10s
     send_batch_size: 1024
 
-  # Add memory limiter to prevent OOM
   memory_limiter:
     check_interval: 1s
     limit_mib: 512
     spike_limit_mib: 128
 
 exporters:
-  # Export to Prometheus
   prometheus:
     endpoint: "0.0.0.0:8889"
     namespace: otel
     const_labels:
       collector: otel
 
-  # Debug exporter for troubleshooting
+  # ✅ ClickHouse exporter
+  clickhouse:
+    endpoint: tcp://clickhouse:9000
+    database: otel
+    username: default
+    password: password
+
+  # ✅ REQUIRED for dual write validation
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/write
+
   debug:
     verbosity: detailed
     sampling_initial: 5
     sampling_thereafter: 200
 
-  # Optional: Export to OTLP (if you want to send to another backend)
-  # otlp:
-  #   endpoint: another-backend:4317
-
 service:
   pipelines:
-    # Metrics pipeline
     metrics:
       receivers: [otlp, hostmetrics, prometheus]
       processors: [memory_limiter, resource, batch]
-      exporters: [prometheus, debug]
+      exporters: [prometheus, prometheusremotewrite, clickhouse, debug]
 
-  # Enable telemetry for the collector itself
   telemetry:
     logs:
       level: info
