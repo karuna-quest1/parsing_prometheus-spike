@@ -1,1 +1,2 @@
 .env
+alertmanager/alertmanager.generated.yml

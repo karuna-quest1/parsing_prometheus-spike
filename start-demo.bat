@@ -10,15 +10,20 @@ echo [1/4] Stopping any existing containers...
 docker-compose down -v 2>nul
 
 echo.
-echo [2/4] Building mock application...
+echo [2/5] Generating Alertmanager config...
+powershell -ExecutionPolicy Bypass -File "%~dp0scripts\generate-alertmanager-config.ps1"
+if errorlevel 1 goto :error
+
+echo.
+echo [3/5] Building mock application...
 docker-compose build --no-cache mock-app
 
 echo.
-echo [3/4] Starting all services...
+echo [4/5] Starting all services...
 docker-compose up -d
 
 echo.
-echo [4/4] Waiting for services to be ready...
+echo [5/5] Waiting for services to be ready...
 timeout /t 15 /nobreak >nul
 
 echo.
@@ -73,3 +78,9 @@ echo Press any key to view live logs from mock app...
 pause >nul
 
 docker-compose logs -f mock-app
+goto :eof
+
+:error
+echo.
+echo Failed to generate Alertmanager config from .env.
+exit /b 1
