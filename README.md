@@ -67,6 +67,30 @@ parsing_prometheus-spike/
 docker-compose up -d
 ```
 
+### Alert Destinations
+
+Alertmanager now routes notifications by severity:
+
+- `critical` alerts go to both Slack and email
+- `warning` alerts go to both Slack and email
+- unmatched alerts fall back to the default email destination
+
+Set the destination values in `.env` before starting the stack:
+
+```env
+SMTP_SMARTHOST=smtp.gmail.com:587
+SMTP_FROM=alerts@example.com
+SMTP_AUTH_USERNAME=alerts@example.com
+SMTP_AUTH_PASSWORD=replace-with-app-password
+ALERT_EMAIL_DEFAULT_TO=ops@example.com
+ALERT_EMAIL_WARNING_TO=team-alerts@example.com
+ALERT_EMAIL_CRITICAL_TO=oncall@example.com
+SLACK_WEBHOOK_WARNING=https://hooks.slack.com/services/REPLACE/WARNING/WEBHOOK
+SLACK_WEBHOOK_CRITICAL=https://hooks.slack.com/services/REPLACE/CRITICAL/WEBHOOK
+SLACK_CHANNEL_WARNING=#gap-warning-alerts
+SLACK_CHANNEL_CRITICAL=#gap-critical-alerts
+```
+
 ### 2. Access the Services
 
 | Service | URL | Notes |

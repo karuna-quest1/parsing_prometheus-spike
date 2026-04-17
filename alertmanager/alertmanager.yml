@@ -1,10 +1,10 @@
 global:
   resolve_timeout: 5m
-  # SMTP settings (configure for email notifications)
-  smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'bondakoli18@gmail.com'
-  smtp_auth_username: 'bondakoli18@gmail.com'
-  smtp_auth_password: 'kysr ybhg fryr jkut'
+  smtp_smarthost: '${SMTP_SMARTHOST}'
+  smtp_from: '${SMTP_FROM}'
+  smtp_auth_username: '${SMTP_AUTH_USERNAME}'
+  smtp_auth_password: '${SMTP_AUTH_PASSWORD}'
+  smtp_require_tls: true
 
 # Templates for notifications
 templates:
@@ -12,7 +12,7 @@ templates:
 
 # Route tree for alerts
 route:
-  # Default receiver
+  # Default receiver for any alert without a severity label match.
   receiver: 'default-receiver'
   
   # Group alerts by these labels
@@ -55,28 +55,43 @@ inhibit_rules:
 # Receivers - where to send notifications
 receivers:
   - name: 'default-receiver'
-    # Webhook example (can integrate with Slack, Teams, etc.)
-    webhook_configs:
-      - url: 'http://localhost:5001/webhook'
+    email_configs:
+      - to: '${ALERT_EMAIL_DEFAULT_TO}'
         send_resolved: true
+        headers:
+          subject: '[INFO] {{ .CommonLabels.alertname }}'
+        html: |
+          <p>Severity: {{ .CommonLabels.severity }}</p>
+          <p>{{ range .Alerts }}{{ .Annotations.summary }}<br/>{{ .Annotations.description }}{{ end }}</p>
 
   - name: 'critical-receiver'
-    # Console logging (for learning)
-    webhook_configs:
-      - url: 'http://localhost:5001/critical'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_CRITICAL}'
         send_resolved: true
-    # Email example (uncomment and configure)
+        channel: '${SLACK_CHANNEL_CRITICAL}'
+        title: '[CRITICAL] {{ .CommonLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }} - {{ .Annotations.description }}{{ end }}'
     email_configs:
-      - to: 'bondakoli19@gmail.com'
+      - to: '${ALERT_EMAIL_CRITICAL_TO}'
+        send_resolved: true
         headers:
-          subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
+          subject: '[CRITICAL] {{ .CommonLabels.alertname }}'
+        html: |
+          <p>Severity: critical</p>
+          <p>{{ range .Alerts }}{{ .Annotations.summary }}<br/>{{ .Annotations.description }}{{ end }}</p>
 
   - name: 'warning-receiver'
-    webhook_configs:
-      - url: 'http://localhost:5001/warning'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_WARNING}'
         send_resolved: true
-    # Slack example (uncomment and configure)
-    # slack_configs:
-    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
-    #     channel: '#alerts'
-    #     title: 'Alert: {{ .GroupLabels.alertname }}'
+        channel: '${SLACK_CHANNEL_WARNING}'
+        title: '[WARNING] {{ .CommonLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }} - {{ .Annotations.description }}{{ end }}'
+    email_configs:
+      - to: '${ALERT_EMAIL_WARNING_TO}'
+        send_resolved: true
+        headers:
+          subject: '[WARNING] {{ .CommonLabels.alertname }}'
+        html: |
+          <p>Severity: warning</p>
+          <p>{{ range .Alerts }}{{ .Annotations.summary }}<br/>{{ .Annotations.description }}{{ end }}</p>

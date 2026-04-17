@@ -6,6 +6,7 @@ This simulates a real application sending metrics, traces, and logs via OpenTele
 import sys
 import time
 import random
+import threading
 import os
 
 # Force unbuffered output
@@ -18,8 +19,7 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.sdk.resources import Resource
 
-# Configuration
-OTEL_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4317")
+OTEL_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
 SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "mock-demo-app")
 
 print(f"🚀 Starting {SERVICE_NAME}")
@@ -74,18 +74,51 @@ active_users_gauge = meter.create_up_down_counter(
     unit="1",
 )
 
+class CachedObservableValue:
+    """
+    Wraps a value-generating function so that the same value is returned for
+    all callbacks within a single export/scrape window.
+
+    Without caching, the OTel SDK invokes the observable callback separately
+    for each export path (OTLP → ClickHouse every 10 s, Prometheus scrape
+    every 15 s).  If the callback calls random.uniform() each time, the two
+    paths see different random numbers — making cross-store validation
+    impossible.
+
+    ttl_seconds should be shorter than the shortest export interval so the
+    value is refreshed once per cycle rather than held across multiple cycles.
+    """
+
+    def __init__(self, generator_fn, ttl_seconds: float = 8.0):
+        self._generator_fn = generator_fn
+        self._ttl = ttl_seconds
+        self._value = generator_fn()          # prime with an initial value
+        self._expires_at = time.monotonic() + ttl_seconds
+        self._lock = threading.Lock()
+
+    def __call__(self, options):
+        with self._lock:
+            if time.monotonic() >= self._expires_at:
+                self._value = self._generator_fn()
+                self._expires_at = time.monotonic() + self._ttl
+        return [metrics.Observation(self._value)]
+
+
+_cpu_temp_cache = CachedObservableValue(lambda: random.uniform(45, 85))
+_mem_bytes_cache = CachedObservableValue(lambda: random.uniform(2e9, 8e9))
+
 cpu_temperature = meter.create_observable_gauge(
     name="system_cpu_temperature",
     description="Mock CPU temperature",
-    unit="celsius",
-    callbacks=[lambda options: [metrics.Observation(random.uniform(45, 85))]],
+    unit="",
+    callbacks=[_cpu_temp_cache],
 )
 
 memory_usage = meter.create_observable_gauge(
     name="system_memory_usage_bytes",
     description="Mock memory usage in bytes",
     unit="bytes",
-    callbacks=[lambda options: [metrics.Observation(random.uniform(2e9, 8e9))]],
+    callbacks=[_mem_bytes_cache],
 )
 
 system_cpu_utilization = meter.create_observable_gauge(
@@ -100,6 +133,39 @@ system_memory_utilization = meter.create_observable_gauge(
     description="Mock memory utilization",
     unit="",
     callbacks=[lambda options: [metrics.Observation(0.95)]],
+)
+
+# Additional metrics
+database_connection_pool_usage = meter.create_observable_gauge(
+    name="database_connection_pool_usage",
+    description="Number of active database connections",
+    unit="1",
+    callbacks=[lambda options: [metrics.Observation(random.uniform(5, 20))]],
+)
+
+cache_hits_total = meter.create_counter(
+    name="cache_hits_total",
+    description="Total number of cache hits",
+    unit="1",
+)
+
+error_rate_by_type_counter = meter.create_counter(
+    name="errors_total",
+    description="Total number of errors by type",
+    unit="1",
+)
+
+request_queue_depth = meter.create_observable_gauge(
+    name="request_queue_depth",
+    description="Number of requests in queue",
+    unit="1",
+    callbacks=[lambda options: [metrics.Observation(random.uniform(0, 10))]],
+)
+
+garbage_collection_duration = meter.create_histogram(
+    name="garbage_collection_duration_ms",
+    description="Garbage collection pause time",
+    unit="ms",
 )
 
 
@@ -159,6 +225,23 @@ def simulate_traffic():
                     "method": method,
                 }
             )
+
+            # Record cache hit (new metric)
+            if random.random() < 0.8:  # 80% cache hit rate
+                cache_hits_total.add(1)
+
+            # Record errors by type (new metric)
+            if status >= 400:
+                error_type = "client_error" if status < 500 else "server_error"
+                error_rate_by_type_counter.add(
+                    1,
+                    {"error_type": error_type}
+                )
+
+            # Record GC pause time periodically (new metric)
+            if random.random() < 0.1:  # Simulate GC 10% of the time
+                gc_time = random.uniform(5, 50)
+                garbage_collection_duration.record(gc_time)
 
         # Simulate user sessions (users join and leave)
         user_change = random.randint(-3, 5)

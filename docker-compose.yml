@@ -22,11 +22,24 @@ services:
     container_name: alertmanager
     ports:
       - "9093:9093"
+    environment:
+      - SMTP_SMARTHOST=${SMTP_SMARTHOST}
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_AUTH_USERNAME=${SMTP_AUTH_USERNAME}
+      - SMTP_AUTH_PASSWORD=${SMTP_AUTH_PASSWORD}
+      - ALERT_EMAIL_DEFAULT_TO=${ALERT_EMAIL_DEFAULT_TO}
+      - ALERT_EMAIL_WARNING_TO=${ALERT_EMAIL_WARNING_TO}
+      - ALERT_EMAIL_CRITICAL_TO=${ALERT_EMAIL_CRITICAL_TO}
+      - SLACK_WEBHOOK_WARNING=${SLACK_WEBHOOK_WARNING}
+      - SLACK_WEBHOOK_CRITICAL=${SLACK_WEBHOOK_CRITICAL}
+      - SLACK_CHANNEL_WARNING=${SLACK_CHANNEL_WARNING}
+      - SLACK_CHANNEL_CRITICAL=${SLACK_CHANNEL_CRITICAL}
     volumes:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
       - alertmanager_data:/alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--config.expand-env'
       - '--storage.path=/alertmanager'
     networks:
       - monitoring
@@ -60,10 +73,10 @@ services:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: otel-collector
     ports:
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
-      - "8888:8888"   # Prometheus metrics exposed by the collector
-      - "8889:8889"   # Prometheus exporter metrics
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"
+      - "8889:8889"
     volumes:
       - ./otel-collector/otel-config.yml:/etc/otel-collector-config.yml
     command: ["--config=/etc/otel-collector-config.yml"]
@@ -88,6 +101,7 @@ services:
 networks:
   monitoring:
     driver: bridge
+
 
 volumes:
   prometheus_data:
