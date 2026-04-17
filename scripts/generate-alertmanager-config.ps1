@@ -83,5 +83,14 @@ if (-not (Test-Path -LiteralPath $outputDirectory)) {
     New-Item -ItemType Directory -Path $outputDirectory | Out-Null
 }
 
+if (Test-Path -LiteralPath $outputPath -PathType Container) {
+    $existingEntries = Get-ChildItem -LiteralPath $outputPath -Force
+    if ($existingEntries.Count -gt 0) {
+        Write-Error "Expected a file at $outputPath, but found a non-empty directory."
+    }
+
+    Remove-Item -LiteralPath $outputPath -Force
+}
+
 Set-Content -Path $outputPath -Value $generated -Encoding utf8
 Write-Host "Generated Alertmanager config at $outputPath"
