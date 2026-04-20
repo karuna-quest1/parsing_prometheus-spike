@@ -13,15 +13,42 @@ A complete, production-ready demo of an observability stack with real-time data 
 
 ## ⚡ Quick Start (Recommended)
 
-Just run this:
+### On macOS / Linux
 
+```bash
+chmod +x start-demo.sh
+./start-demo.sh
+```
+
+### On Windows
+
+**Option 1: Using Git Bash or WSL**
+```bash
+bash start-demo.sh
+```
+
+**Option 2: Using Command Prompt (native Windows)**
 ```bat
-.\start-demo.bat
+start-demo.bat
 ```
 
 Then open Grafana at [http://localhost:3000](http://localhost:3000) — login: **admin** / **admin**
 
 The dashboard will be pre-loaded with live data!
+
+## ⚙️ Prerequisites
+
+1. **Create a `.env` file** in the root directory with your configuration:
+```env
+SMTP_SMARTHOST=smtp.gmail.com:587
+SMTP_FROM=alerts@example.com
+SMTP_AUTH_USERNAME=alerts@example.com
+SMTP_AUTH_PASSWORD=your-app-password-here
+```
+
+2. **Ensure Docker and Docker Compose are installed:**
+   - [Docker Desktop](https://www.docker.com/products/docker-desktop) (includes Docker Compose)
+   - Or install [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/) separately
 
 ## 🎁 What You Get Out of the Box
 
@@ -36,14 +63,20 @@ The dashboard will be pre-loaded with live data!
 
 ```
 parsing_prometheus-spike/
-├── start-demo.bat                           # 🚀 One-click demo launcher
+├── start-demo.bat                           # 🚀 Demo launcher for Windows (native)
+├── start-demo.sh                            # 🚀 Demo launcher for macOS/Linux/WSL
 ├── README.md                                # This file
+├── .env                                     # Configuration file (you create this)
 ├── docker-compose.yml                       # Main orchestration file
 ├── prometheus/
 │   ├── prometheus.yml                       # Prometheus configuration
 │   └── alert_rules.yml                      # 13 alert definitions
 ├── alertmanager/
-│   └── alertmanager.yml                     # Alertmanager routing config
+│   ├── alertmanager.yml                     # Alertmanager routing config (template)
+│   └── alertmanager.generated.yml           # Generated config (created at startup)
+├── scripts/
+│   ├── generate-alertmanager-config.ps1     # Config generator (PowerShell)
+│   └── generate-alertmanager-config.sh      # Config generator (Bash)
 ├── grafana/
 │   └── provisioning/
 │       ├── datasources/
@@ -59,9 +92,48 @@ parsing_prometheus-spike/
     └── requirements.txt                     # Python dependencies
 ```
 
+## 🚀 Configuration
+
+### Create a `.env` file
+
+Before starting the demo, create a `.env` file in the root directory with your configuration:
+
+```env
+# Alertmanager SMTP Configuration
+SMTP_SMARTHOST=smtp.gmail.com:587
+SMTP_FROM=alerts@example.com
+SMTP_AUTH_USERNAME=alerts@example.com
+SMTP_AUTH_PASSWORD=replace-with-app-password
+
+# Optional: Email receivers
+ALERT_EMAIL_DEFAULT_TO=ops@example.com
+ALERT_EMAIL_WARNING_TO=team-alerts@example.com
+ALERT_EMAIL_CRITICAL_TO=oncall@example.com
+
+# Optional: Slack webhooks
+SLACK_WEBHOOK_WARNING=https://hooks.slack.com/services/REPLACE/WARNING/WEBHOOK
+SLACK_WEBHOOK_CRITICAL=https://hooks.slack.com/services/REPLACE/CRITICAL/WEBHOOK
+SLACK_CHANNEL_WARNING=#gap-warning-alerts
+SLACK_CHANNEL_CRITICAL=#gap-critical-alerts
+```
+
+**Note:** The startup script will automatically generate `alertmanager/alertmanager.generated.yml` by substituting variables from your `.env` file.
+
 ## 🚀 Manual Start
 
-### 1. Start the Stack
+### 1. Generate Alertmanager Config
+
+**On macOS / Linux / WSL:**
+```bash
+bash scripts/generate-alertmanager-config.sh
+```
+
+**On Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\generate-alertmanager-config.ps1
+```
+
+### 2. Start the Stack
 
 ```bash
 docker-compose up -d
@@ -71,25 +143,11 @@ docker-compose up -d
 
 Alertmanager now routes notifications by severity:
 
-- `critical` alerts go to both Slack and email
-- `warning` alerts go to both Slack and email
+- `critical` alerts go to email and/or Slack
+- `warning` alerts go to email and/or Slack  
 - unmatched alerts fall back to the default email destination
 
-Set the destination values in `.env` before starting the stack:
-
-```env
-SMTP_SMARTHOST=smtp.gmail.com:587
-SMTP_FROM=alerts@example.com
-SMTP_AUTH_USERNAME=alerts@example.com
-SMTP_AUTH_PASSWORD=replace-with-app-password
-ALERT_EMAIL_DEFAULT_TO=ops@example.com
-ALERT_EMAIL_WARNING_TO=team-alerts@example.com
-ALERT_EMAIL_CRITICAL_TO=oncall@example.com
-SLACK_WEBHOOK_WARNING=https://hooks.slack.com/services/REPLACE/WARNING/WEBHOOK
-SLACK_WEBHOOK_CRITICAL=https://hooks.slack.com/services/REPLACE/CRITICAL/WEBHOOK
-SLACK_CHANNEL_WARNING=#gap-warning-alerts
-SLACK_CHANNEL_CRITICAL=#gap-critical-alerts
-```
+All destination values are configured in your `.env` file.
 
 ### 2. Access the Services
 

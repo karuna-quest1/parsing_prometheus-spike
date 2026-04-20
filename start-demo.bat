@@ -1,4 +1,6 @@
 @echo off
+setlocal enabledelayedexpansion
+
 echo ========================================
 echo   GAP Stack - Complete Demo Launcher
 echo   Grafana + Alertmanager + Prometheus
@@ -6,21 +8,44 @@ echo   with OpenTelemetry Collector
 echo ========================================
 echo.
 
-echo [1/4] Stopping any existing containers...
+REM Check if .env file exists
+if not exist "%~dp0.env" (
+    echo ERROR: Missing .env file at %~dp0.env
+    echo.
+    echo Please create a .env file with your configuration.
+    echo See README.md for details.
+    exit /b 1
+)
+
+echo [1/5] Stopping any existing containers...
 docker-compose down -v 2>nul
 
 echo.
 echo [2/5] Generating Alertmanager config...
 powershell -ExecutionPolicy Bypass -File "%~dp0scripts\generate-alertmanager-config.ps1"
-if errorlevel 1 goto :error
+if errorlevel 1 (
+    echo ERROR: Failed to generate Alertmanager config
+    echo.
+    echo If you're on Windows with Git Bash or WSL, you can also run:
+    echo   bash start-demo.sh
+    exit /b 1
+)
 
 echo.
 echo [3/5] Building mock application...
 docker-compose build --no-cache mock-app
+if errorlevel 1 (
+    echo ERROR: Failed to build mock application
+    exit /b 1
+)
 
 echo.
 echo [4/5] Starting all services...
 docker-compose up -d
+if errorlevel 1 (
+    echo ERROR: Failed to start services
+    exit /b 1
+)
 
 echo.
 echo [5/5] Waiting for services to be ready...
@@ -33,7 +58,7 @@ echo ========================================
 echo.
 echo Access the following URLs:
 echo.
-echo   Grafana Dashboard:     http://localhost:3000
+echo   Grafana Dashboard:     http://localhost:12000
 echo   ^(Login: admin / admin^)
 echo.
 echo   Prometheus:            http://localhost:9090
@@ -48,6 +73,10 @@ echo   * Pre-configured Dashboard: "GAP Complete Monitoring Dashboard"
 echo   * Real-time metrics from mock application
 echo   * 10+ Alert rules monitoring the stack
 echo   * OpenTelemetry data pipeline in action
+echo.
+echo To stop all services, run:
+echo   docker-compose down
+echo.
 echo   * Host system metrics collection
 echo.
 echo ========================================
@@ -71,7 +100,7 @@ echo ========================================
 echo.
 echo Opening Grafana in your browser...
 timeout /t 3 /nobreak >nul
-start http://localhost:3000
+start http://localhost:12000
 
 echo.
 echo Press any key to view live logs from mock app...

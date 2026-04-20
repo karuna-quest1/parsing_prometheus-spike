@@ -44,11 +44,11 @@ $templatePath = Join-Path $repoRoot 'alertmanager\alertmanager.yml'
 $outputPath = Join-Path $repoRoot 'alertmanager\alertmanager.generated.yml'
 
 if (-not (Test-Path -LiteralPath $envPath)) {
-    Write-Error "Missing .env file at $envPath"
+    Write-Error "Missing .env file at $envPath" -ErrorAction Stop
 }
 
 if (-not (Test-Path -LiteralPath $templatePath)) {
-    Write-Error "Missing Alertmanager template at $templatePath"
+    Write-Error "Missing Alertmanager template at $templatePath" -ErrorAction Stop
 }
 
 $envValues = Get-EnvFileValues -Path $envPath
@@ -80,17 +80,19 @@ $generated = [regex]::Replace(
 
 $outputDirectory = Split-Path -Path $outputPath -Parent
 if (-not (Test-Path -LiteralPath $outputDirectory)) {
-    New-Item -ItemType Directory -Path $outputDirectory | Out-Null
+    New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 }
 
-if (Test-Path -LiteralPath $outputPath -PathType Container) {
-    $existingEntries = Get-ChildItem -LiteralPath $outputPath -Force
-    if ($existingEntries.Count -gt 0) {
-        Write-Error "Expected a file at $outputPath, but found a non-empty directory."
+# Remove any existing file or directory at the output path
+if (Test-Path -LiteralPath $outputPath) {
+    if (Test-Path -LiteralPath $outputPath -PathType Container) {
+        # It's a directory - remove it
+        Remove-Item -LiteralPath $outputPath -Recurse -Force
+    } else {
+        # It's a file - remove it
+        Remove-Item -LiteralPath $outputPath -Force
     }
-
-    Remove-Item -LiteralPath $outputPath -Force
 }
 
-Set-Content -Path $outputPath -Value $generated -Encoding utf8
+Set-Content -Path $outputPath -Value $generated -Encoding utf8 -NoNewline
 Write-Host "Generated Alertmanager config at $outputPath"
